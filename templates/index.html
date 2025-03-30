@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Summarizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="http://www.youtube.com/player_api"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563eb',
+                        secondary: '#1e40af',
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">YouTube Summarizer</h1>
+            <p class="text-gray-600">Get instant summaries and transcripts of YouTube videos</p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <form id="summarizeForm" class="space-y-6">
+                <div>
+                    <label for="url" class="block text-sm font-medium text-gray-700 mb-2">
+                        YouTube URL
+                    </label>
+                    <input type="url" 
+                           id="url" 
+                           name="url" 
+                           class="w-full px-4 py-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                           placeholder="https://www.youtube.com/watch?v=..."
+                           required>
+                </div>
+                <button type="submit" 
+                        class="w-full bg-primary text-white py-3 px-6 rounded-md hover:bg-secondary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                    Generate Summary & Transcript
+                </button>
+            </form>
+        </div>
+
+        <div id="videoContainer" class="hidden mb-8">
+            <div style="left: 0; width: 100%; height: 0; position: relative; padding-bottom: 56.25%;">
+                <iframe id="youtube-player" src="" style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;" 
+                        allowfullscreen scrolling="no" 
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share;"></iframe>
+                        
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div id="summaryContainer" class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Video Summary</h2>
+                <div id="summaryContent" class="text-gray-700 space-y-4">
+                    <p class="text-gray-500">Summary will appear here...</p>
+                </div>
+            </div>
+
+            <div id="transcriptContainer" class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Video Transcript</h2>
+                <div id="transcriptContent" class="space-y-4">
+                    <p class="text-gray-500">Transcript will appear here...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('summarizeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('url').value;
+            const summaryContainer = document.getElementById('summaryContainer');
+            const transcriptContainer = document.getElementById('transcriptContainer');
+            const summaryContent = document.getElementById('summaryContent');
+            const transcriptContent = document.getElementById('transcriptContent');
+
+            try {
+                summaryContent.innerHTML = "<div class='text-center py-8'><div class='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto'></div></div>";
+                transcriptContent.innerHTML = "<div class='text-center py-8'><div class='animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto'></div></div>";
+                
+                const response = await fetch('/summarize', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ url }),
+                });
+                
+                const data = await response.json();
+                
+                const videoContainer = document.getElementById('videoContainer');
+                videoContainer.classList.remove('hidden');
+                videoContainer.querySelector('iframe').src = `https://www.youtube-nocookie.com/embed/${data.video_id}?enablejsapi=1`;
+                
+                if (data.success) {
+                    summaryContent.innerHTML = `
+                        <p class="text-gray-700">${data.summary}</p>
+                    `;
+                    
+                    if (data.transcript && data.transcript.length > 0) {
+                        transcriptContent.innerHTML = `
+                            <div class="space-y-[0.05rem]"  >
+                                ${data.transcript.map(item => `
+                                    <div class="border-l-4 border-gray-200 pl-4 ts hover:cursor-pointer hover:bg-gray-200">
+                                        <span class="text-sm text-gray-500">[${item.timestamp}]</span>
+                                        <p class="text-gray-700">${item.text}</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    } else {
+                        transcriptContent.innerHTML = `<p class="text-gray-500">No transcript available</p>`;
+                    }
+                } else {
+                    alert('Failed to generate summary and transcript');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while processing your request');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const addTranscriptEventListeners = () => {
+                document.querySelectorAll('.ts').forEach((ts) => {
+                    if (!ts.hasAttribute('data-click-handler')) {
+                        ts.setAttribute('data-click-handler', 'true');
+                        ts.addEventListener('click', () => {
+                            console.log("Yes");
+                            let [h, m, s] = ts.children[0].textContent.substring(1, ts.children[0].textContent.length - 1).split(":");
+                            console.log(h)
+                            console.log(ts.children[0].textContent)
+                            const iframe = document.getElementById('youtube-player');
+                            console.log(parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s))
+                            iframe.contentWindow.postMessage(
+                                '{ "event": "command", "func": "seekTo", "args": ["' + parseInt(h) * 3600 + parseInt(m) * 60 + parseInt(s) + '"] }', '*'
+                            );
+                        });
+                    }
+                });
+            };
+
+            const transcriptContent = document.getElementById('transcriptContent');
+            new MutationObserver(addTranscriptEventListeners).observe(transcriptContent, {
+                childList: true,
+                subtree: true
+            });
+        });
+    </script>
+
+    <style>
+        div#transcriptContainer, div#summaryContainer {
+            white-space: pre-line;
+        }
+
+        @media (max-width: 768px) {
+            .grid-cols-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>
