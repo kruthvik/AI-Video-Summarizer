@@ -3,14 +3,14 @@ Simple UI interface to summarize YouTube videos in a format that users don't hav
 
 Uses Flask to set up a local interface, but online interface coming soon. 
 
-**Usage**
+## Usage
 
-First,
 ```
 pip install requirements.txt
 ```
-Then, type
 ```
 ./main.bat
 ```
-to execute. It will prompt the creation of a localhost website to use the GUI.
+It will prompt the creation of a localhost website to use the GUI. 
+![image](https://github.com/user-attachments/assets/ae166ce1-3395-412c-a25a-c927bcc5ff07)
+
