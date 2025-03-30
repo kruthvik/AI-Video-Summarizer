@@ -4,7 +4,8 @@ Simple UI interface to summarize YouTube videos in a format that users don't hav
 Uses Flask to set up a local interface, but online interface coming soon. 
 
 **Usage**
-Type
+
+First,
 ```
 pip install requirements.txt
 ```
